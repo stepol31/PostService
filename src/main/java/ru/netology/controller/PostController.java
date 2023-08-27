@@ -1,49 +1,56 @@
 package ru.netology.controller;
 
-import com.google.gson.Gson;
-import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.*;
+import ru.netology.dto.PostDto;
 import ru.netology.model.Post;
 import ru.netology.service.PostService;
 
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.io.Reader;
+import java.util.List;
+import java.util.stream.Collectors;
 
-@Controller
+@RestController
+@RequestMapping("/api/posts")
 public class PostController {
-    public static final String APPLICATION_JSON = "application/json";
     private final PostService service;
 
     public PostController(PostService service) {
         this.service = service;
     }
 
-    public void all(HttpServletResponse response) throws IOException {
-        response.setContentType(APPLICATION_JSON);
-        final var data = service.all();
-        final var gson = new Gson();
-        response.getWriter().print(gson.toJson(data));
+    @GetMapping("/{id}")
+    public PostDto getById(@PathVariable long id) {
+        Post post = service.getById(id);
+        return mapToDto(post);
     }
 
-    public void getById(long id, HttpServletResponse response) throws IOException {
-        response.setContentType(APPLICATION_JSON);
-        final var data = service.getById(id);
-        final var gson = new Gson();
-        response.getWriter().print(gson.toJson(data));
+    @GetMapping
+    public List<PostDto> all() {
+        return service.all().stream()
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
     }
 
-    public void save(Reader body, HttpServletResponse response) throws IOException {
-        response.setContentType(APPLICATION_JSON);
-        final var gson = new Gson();
-        final var post = gson.fromJson(body, Post.class);
-        final var data = service.save(post);
-        response.getWriter().print(gson.toJson(data));
+    @PostMapping
+    public PostDto save(@RequestBody PostDto post) {
+        Post model = mapToModel(post);
+        Post result = service.save(model);
+
+        return mapToDto(result);
     }
 
-    public void removeById(long id, HttpServletResponse response) throws IOException {
-        response.setContentType(APPLICATION_JSON);
-        final var data = service.removeById(id);
-        final var gson = new Gson();
-        response.getWriter().print(gson.toJson(data));
+    @DeleteMapping("/{id}")
+    public void removeById(@PathVariable long id) {
+        service.removeById(id);
+    }
+
+    private PostDto mapToDto(Post post) {
+        return new PostDto(post.getId(), post.getContent());
+    }
+
+    private Post mapToModel(PostDto postDto) {
+        if (postDto.getId() == null) {
+            return new Post(postDto.getContent());
+        }
+        return new Post(postDto.getId(), postDto.getContent());
     }
 }
